@@ -13,7 +13,7 @@ Python 3.6
 3. n_fleet.txt 파일에 현재 함대 인원수 기입
 4. image_source/s_atk 에 오늘 강적 스샷들 넣기
 5. image_source/s_fleet 에 현재 함대 인원 스샷들 넣기
-6. autokey.py 실행
+6. fleet_ar.py 실행
 
 
 ## output
