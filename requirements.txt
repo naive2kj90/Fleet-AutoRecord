@@ -2,4 +2,4 @@ pillow
 pyautogui==0.9.39
 pytesseract
 opencv-python
-pywin32
+mss
