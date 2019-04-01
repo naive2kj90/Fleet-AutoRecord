@@ -7,9 +7,25 @@ from PIL import Image, ImageGrab, ImageEnhance, ImageOps, ImageFilter  # pip3 in
 import pyautogui as pag  # pip3 install pyautogui==0.9.39
 from pytesseract import image_to_string # pip3 install pytesseract
 import cv2  # pip3 install opencv-python
-import win32api, win32con  # pip3 install pywin32
+from mss import mss  # pip3 install mss
 
+# initila settings
 file_path = os.path.abspath(os.path.dirname(__file__))
+
+correction1 = 85  # 스샷 위치에 따른 강적 딜 보정
+correction2 = 85  # 스샷 위치에 따른 함대원 리스트 보정
+
+f = open("n_participant.txt", "r")
+n_participant = int(f.readline())  # 오늘 강척 친 인원
+f.close()
+f2 = open("n_fleet.txt", "r")
+n_fleet = int(f2.readline())  # 현재 함대원 수
+f2.close()
+
+date_n = str(dt.datetime.now()).split(' ')[0].split('-')
+date_n = date_n[0] + date_n[1] + date_n[2]
+
+(width, height) = pag.size()
 
 
 def image_crop():
@@ -24,19 +40,21 @@ def image_crop():
 		os.mkdir(file_path + "/images_bk/bk_dmg")
 
 	for (idx, i) in enumerate(img_list):
-		print("i : ", i)
-		r,g,b,a = Image.open(i).split()
-		img2 = Image.merge('RGB', (r,g,b))
+		# print("i : ", i)
+		# r,g,b,a = Image.open(i).split()
+		# r,g,b = Image.open(i).split()
+		# img2 = Image.merge('RGB', (r,g,b))
+		img2 = Image.open(i)
 
 		check = 4
 		if idx == n_participant // 4:  # 남은 인원수에 대한 처리
 			check = n_participant % 4
 
 		for j in range(check):
-			crop_area4 = (535, 220 + (j+4-check)*116, 1060, 320 + (j+4-check)*116)  # dmg 1
+			crop_area4 = (535, 220+(j+4-check)*116+correction1, 1060, 320+(j+4-check)*116+correction1)  # dmg 1
 			cropped_img2 = img2.crop(crop_area4)
-			cropped_img2.save('t_test' + str((j+4-check)+1) + '.png')
-			pos = imagesearch('t_test' + str((j+4-check)+1) + '.png', template)
+			cropped_img2.save('t_test' + str(j+1) + '.png')
+			pos = imagesearch('t_test' + str(j+1) + '.png', template)
 			# print("position : ", pos[0], pos[1])
 			crop_area2 = (0, pos[1]+1, 1060-535, pos[1] + 41)
 			cropped_img5 = cropped_img2.crop(crop_area2)
@@ -53,7 +71,7 @@ def image_crop():
 			# crop_dmg = crop_dmg.filter(ImageFilter.FIND_EDGES)
 			crop_dmg.save(file_path + "/images_bk/bk_dmg/" + str(idx*4+j).zfill(2) + ".png")
 			# txt_read(cropped_img2, cropped_img3)
-			os.remove('t_test' + str((j+4-check)+1) + '.png')
+			os.remove('t_test' + str(j+1) + '.png')
 
 
 def fleet_crop():
@@ -63,27 +81,24 @@ def fleet_crop():
 	img_list2 = glob.glob(file_path + "/images_source/s_fleet/*.png")
 	template2 = cv2.imread(file_path + '/images_source/bar2.png', 0)
 	# crop_area_ = (250, 170, 520, 790)  # 4명 전체
-	# img_2 = Image.open('test1.png')
-	# cropped_img_ = img_2.crop(crop_area_)
 	for (idx, i) in enumerate(img_list2):
-		print("i : ", i)
+		# print("i : ", i)
 		img_2 = Image.open(i)
-		r,g,b,a = img_2.split()
-		img_2 = Image.merge('RGB', (r,g,b))
+		#r,g,b,a = img_2.split()
+		#img_2 = Image.merge('RGB', (r,g,b))
 		check2 = 4
 		if idx == n_fleet // 4:
 			check2 = n_fleet % 4
 		for j in range(check2):  # 4 5
-			crop_area_4 = (250, 170 + (j+4-check2)*162, 520, 343 + (j+4-check2)*162)
+			crop_area_4 = (250, 170+(j+4-check2)*162+correction2, 520, 343+(j+4-check2)*162+correction2)
 			cropped_img_2 = img_2.crop(crop_area_4)
-			cropped_img_2.save('t_test' + str((j+4-check2)+1) + '.png')
-			pos = imagesearch('t_test' + str((j+4-check2)+1) + '.png', template2)
-			# print("position_fleet : ", pos[0], pos[1])
+			cropped_img_2.save('t_test' + str(j+1) + '.png')
+			pos = imagesearch('t_test' + str(j+1) + '.png', template2)
 			crop_area_2 = (39, pos[1]-60, 249, pos[1]-10)
 			crop_nick_fleet = bg_black(cropped_img_2.crop(crop_area_2))
 			# crop_nick_fleet = crop_nick_fleet.filter(ImageFilter.FIND_EDGES)  # 테두리
 			crop_nick_fleet.save(file_path + "/images_bk/bk_fleet/" + str(idx*4+j).zfill(2) + ".png")
-			os.remove('t_test' + str((j+4-check2)+1) + '.png')
+			os.remove('t_test' + str(j+1) + '.png')
 
 
 def imagesearch(image_1, template, precision=0.8, method=None):
@@ -137,25 +152,25 @@ def hit_compare():
 	f_list = cv2.imread(file_path + '/images_bk/f_list.png', 0)
 	# for (idx, j) in enumerate(fleet_list):
 	for (idx, i) in enumerate(hit_list):
-		pos = imagesearch(i, f_list, 0.8, 1)
+		pos = imagesearch(i, f_list, 0.75, 1)
 		if not pos[0] == -1:
-			print("Hit idx : ", idx)
+			# print("Hit idx : ", idx)
 			compare_result[idx] = pos[1] // 50
 			result[compare_result[idx]] = 1  # dmg로 나중에 수정
 		else:
 			print("\n----- 함대원 리스트 재촬영 요망 -----\n")
-			sys.exit(1)
+			#sys.exit(1)
 
 	print("\nidx_result : ", compare_result)
-	'''
+	#'''
 	ccc = 0
 	for ii in range(n_participant):
 		for jj in range(n_participant):
 			if compare_result[ii] == compare_result[jj]:
 				ccc = ccc + 1
 		ccc = ccc - 1
-	print("\nError : ", ccc/(n_participant))
-	'''
+	print("\nError : ", ccc/(n_participant), " : ← 0 이 아니면 문제 있음!")
+	#'''
 
 	if not os.path.isdir(file_path + "/images_result"):
 		os.mkdir(file_path + "/images_result")
@@ -185,35 +200,38 @@ def result_img(c_result):
 	f_list = glob.glob(file_path + "/images_source/s_fleet/*.png")
 
 	for (idx, i) in enumerate(s_list):  # 데미지 결과
-		r,g,b,a = Image.open(i).split()
-		img2 = Image.merge('RGB', (r,g,b))
+		img2 = Image.open(i)
+		# r,g,b,a = Image.open(i).split()
+		# r,g,b = Image.open(i).split()
+		# img2 = Image.merge('RGB', (r,g,b))
 		check = 4
 		if idx == n_participant // 4:  # 남은 인원수에 대한 처리
 			check = n_participant % 4
 		for j in range(check):
-			crop_area4 = (0, 220 + (j+4-check)*116, 1060, 320 + (j+4-check)*116)  # dmg 1
+			crop_area4 = (0, 220+(j+4-check)*116+correction1, 1060, 320+(j+4-check)*116+correction1)  # dmg 1
 			cropped_img2 = img2.crop(crop_area4)
-			cropped_img2.save('t_test' + str((j+4-check)+1) + '.png')
-			pos = imagesearch('t_test' + str((j+4-check)+1) + '.png', template1)
+			cropped_img2.save('t_test' + str(j+1) + '.png')
+			pos = imagesearch('t_test' + str(j+1) + '.png', template1)
 			crop_area2 = (380, pos[1]+1, 1060, pos[1] + 41)
 			cropped_img5 = cropped_img2.crop(crop_area2)
 
 			area2 = (0, (idx*4+j)*40, 680, (idx*4+j+1)*40)
 			result_image.paste(cropped_img5, area2)
-			os.remove('t_test' + str((j+4-check)+1) + '.png')
+			os.remove('t_test' + str(j+1) + '.png')
 
 	check_y, check_n = 0, 0
 	for (idx, i) in enumerate(f_list):	# 참여/미참여 그룹 구분
-		r,g,b,a = Image.open(i).split()
-		img_2 = Image.merge('RGB', (r,g,b))
+		#r,g,b,a = Image.open(i).split()
+		#img_2 = Image.merge('RGB', (r,g,b))
+		img_2 = Image.open(i)
 		check2 = 4
 		if idx == n_fleet // 4:  # 남은 인원수에 대한 처리
 			check2 = n_fleet % 4
 		for j in range(check2):
-			crop_area_4 = (250, 170 + (j+4-check2)*162, 520, 343 + (j+4-check2)*162)
+			crop_area_4 = (250, 170+(j+4-check2)*162+correction2, 520, 343+(j+4-check2)*162+correction2)
 			cropped_img_2 = img_2.crop(crop_area_4)
-			cropped_img_2.save('t_test' + str((j+4-check2)+1) + '.png')
-			pos = imagesearch('t_test' + str((j+4-check2)+1) + '.png', template2)
+			cropped_img_2.save('t_test' + str(j+1) + '.png')
+			pos = imagesearch('t_test' + str(j+1) + '.png', template2)
 			crop_area_2 = (39, pos[1]-60, 249, pos[1]-10)
 			crop_nick_fleet = cropped_img_2.crop(crop_area_2)
 
@@ -227,52 +245,49 @@ def result_img(c_result):
 				result_no.paste(crop_nick_fleet, area3)
 				check_n = check_n + 1			
 				# print("nn : ", check_n)
-			os.remove('t_test' + str((j+4-check2)+1) + '.png')
+			os.remove('t_test' + str(j+1) + '.png')
 
 	result_image.save(file_path + "/images_result/" + date_n + '/' + date_n + "_강적결과.png")
 	result_yes.save(file_path + "/images_result/" + date_n + '/' + date_n + "_강적O.png")
 	result_no.save(file_path + "/images_result/" + date_n + '/' + date_n + "_강적X.png")
 
-
-def mousemove(n_participant):
-	# https://tariat.tistory.com/434
-	print("wh :", width, height)
-
-	pag.moveTo(width/2, height/2, 1)  # 화면 중간으로 이동
-	pag.click()
-	for j in range(math.ceil(n_participant/4) - 1):
-		for i in range(2):
-			pag.moveTo(width/2, height/2 + 150, 1)
-			pag.mouseUp()
-			pag.moveTo(width/2, height/2 - 150, 1)
-			pag.mouseDown()
-			pag.click()
-			'''
-			pag.scroll(-5)
-			if j < 3 :
-				time.sleep(0.162)
-			else:
-				time.sleep(0.15)
-			print("i : ", i, j)
-			pag.click()'''
-		time.sleep(3.0)
-	# p
-	# pag.dragTo(width/2, height/2 - 150, button='left')
-	# pag.moveTo(width/2, height/2 - 150, 1)
-	# pag.click()
-	# pag.mouseUp()
-	# pag.scroll(-90)
+	print('\nresult image making done\n')
 
 
-def mousemove2(n_participant):
-	print("wh :", width, height)
-	win32api.SetCursorPos((int(width/2),int(height/2)))
-	win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,int(width/2), int(height/2),0,0)
-	win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, 0, -50, 0, 0)
-	win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,int(width/2), int(height/2),0,0)
+def screenshot1():
+	img_dir1 = file_path + "/images_source/s_atk"
+	if not os.path.isdir(img_dir1):
+		os.mkdir(img_dir1)
+	date_n = str(dt.datetime.now()).split(' ')[1].split('.')[0].split(':')
+	date_n = date_n[0] + date_n[1] + date_n[2]
+
+	with mss() as sct:
+		sct.shot(output=img_dir1 + "/" + date_n + ".png")
 
 
-def txt_read(nick, dmg):
+def screenshot2():
+	img_dir1 = file_path + "/images_source/s_fleet"
+	if not os.path.isdir(img_dir1):
+		os.mkdir(img_dir1)
+	date_n = str(dt.datetime.now()).split(' ')[1].split('.')[0].split(':')
+	date_n = date_n[0] + date_n[1] + date_n[2]
+
+	with mss() as sct:
+		sct.shot(output=img_dir1 + "/" + date_n + ".png")
+
+
+def s_clear():
+	img_dir1 = file_path + "/images_source/s_atk"
+	if os.path.isdir(img_dir2):
+		shutil.rmtree(img_dir2)
+	os.mkdir(img_dir2)
+	img_dir2 = file_path + "/images_source/s_fleet"
+	if os.path.isdir(img_dir2):
+		shutil.rmtree(img_dir2)
+	os.mkdir(img_dir2)
+
+
+def txt_read(nick, dmg):  # 미구현.
 	# http://m.blog.daum.net/geoscience/1266
 	# https://github.com/UB-Mannheim/tesseract/wiki
 	s_w = image_to_string(nick, lang='kor').split('\n')[0]
@@ -280,36 +295,28 @@ def txt_read(nick, dmg):
 	print("nick / dmg : ", s_w, " / ", s_w2, ".")
 
 
-if __name__=='__main__':
+#if __name__ == '__main__':
+def main():
 	print("\n---- Start ----")
 
 	img_dir = file_path + "/images_crop"
 
 	if not os.path.isdir(img_dir):
 		os.mkdir(img_dir)
+
 	if not os.path.isdir(file_path + "/images_bk"):
 		os.mkdir(file_path + "/images_bk")
+	else:
+		shutil.rmtree(file_path + "/images_bk")
+		os.mkdir(file_path + "/images_bk")
 
-	f = open("n_participate.txt", "r")
-	n_participant = int(f.readline())  # 오늘 강척 친 인원
-	f.close()
-	f2 = open("n_fleet.txt", "r")
-	n_fleet = int(f.readline())  # 현재 함대원 수
-	f2.close()
-	print("\n참가자, 총 함대원 : ", n_participant, ", ", n_fleet)
-
-	date_n = str(dt.datetime.now()).split(' ')[0].split('-')
-	date_n = date_n[0] + date_n[1] + date_n[2]
-
-	(width, height) = pag.size()
-
-	# mousemove2(n_participant)  # 마우스 움직여서 매크로 촬영. 미완성
+	# mousemove2(n_participant)  # 마우스 움직여서 매크로 촬영. 오토핫키를 통해 구현.
 	image_crop()  # 강적 친 사람들 닉네임/DMG 추출
 	fleet_crop()  # 현재 함대원 명단 추출
 	img_merge()  # 현재 함대원 명단 이미지 1개로 합치기
 	c_result = hit_compare()  # 강적 누가 쳤나 구분
 	result_img(c_result)  # 보여주기용 output 이미지 생성
 
-	shutil.rmtree(img_dir)
+	shutil.rmtree(img_dir)  # 임시 경로 삭제
 
 	print("\n---- END ----")
